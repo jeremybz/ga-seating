@@ -168,7 +168,7 @@ func show_scores( sched [][]int ) {
 }
 
 func print_schedule( sched [][]int) {
-  for i := 1; i < rotations; i++ {
+  for i := 0; i < rotations; i++ {
     fmt.Println( fmt.Sprint(sched[i]) )
   }
   fmt.Println( "" )
@@ -315,6 +315,7 @@ func ga(){
 
   for i := 0; i < pop_size; i++ {
     pop[ i ] = generate_schedule()
+    scores[ i ] = evaluate_schedule_simple( pop[ i ] )
   }
   best := 0
   goal := (member_count * (member_count -1 )) / 2
@@ -323,8 +324,6 @@ func ga(){
     sum = 0
     for i := 0; i < pop_size; i++ {
       ordered_scores[ i ] = i
-      //scores[ i ] = evaluate_schedule( pop[ i ] )
-      scores[ i ] = evaluate_schedule_simple( pop[ i ] )
       sum += scores[ i ]
       if( scores[ i ] > best ){
         best = scores[ i ]
@@ -344,12 +343,15 @@ func ga(){
       pu2 := random.Intn( pop_size )
       pop[ ordered_scores[ i ] ] = hotsteamylove( pop[ pu1 ], pop[ pu2 ] )
       if random.Intn( 1000 ) < mutation_permille {
-        mutate_schedule1( pop[ i ] )
+        mutate_schedule1( pop[ ordered_scores [ i ] ] )
       }else if random.Intn( 1000 ) < mutation_permille {
-        mutate_schedule2( pop[ i ] )
+        mutate_schedule2( pop[ ordered_scores [ i ] ] )
       }
+      // update score of this individual
+      scores[ ordered_scores[ i ] ] = evaluate_schedule_simple( pop[ ordered_scores[ i ] ] )
     }
   }
+  fmt.Println( "Solution found for", rotations, "steps." )
 }
 
 func main() {
