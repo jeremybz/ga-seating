@@ -10,9 +10,12 @@ import (
 
 type byScore []int
 
+// array of tables, each table is defined with a number of seats
+// tables can be in arbitrary order
 var tables = []int{4,4,4,3,3}
-var rotations = 7
-var eval_depth = 2
+
+// number of times to change seating
+var rotations = 9
 var source = rand.NewSource(time.Now().UnixNano())
 var pop_size = 10000
 var gen_size = 1000
@@ -237,7 +240,7 @@ func stepped_hill_climb(){
   s1 := generate_schedule()
   s2 := copy_schedule( s1 )
 
-  for ; eval_depth <= rotations; eval_depth++ {
+  for eval_depth := 1; eval_depth <= rotations; eval_depth++ {
     for i := 0; i < 400000; i++ {
       score1 = evaluate_schedule( s1 )
       score2 = evaluate_schedule( s2 )
@@ -336,9 +339,7 @@ func ga(){
     }
     sort.Sort( byScore( ordered_scores ) )
     for i := 0; i < gen_size; i++ {
-      // replace weakest members with offspring of fit members
-      //pu1 := ordered_scores[ pop_size - ( 1 + random.Intn( pop_size / 2 ) ) ]
-      //pu2 := ordered_scores[ pop_size - ( 1 + random.Intn( pop_size / 2 ) ) ]
+      // replace weakest members with offspring of randomly selected members
       pu1 := random.Intn( pop_size )
       pu2 := random.Intn( pop_size )
       pop[ ordered_scores[ i ] ] = hotsteamylove( pop[ pu1 ], pop[ pu2 ] )
