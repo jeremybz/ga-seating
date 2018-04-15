@@ -56,9 +56,7 @@ Given a group of eighteen individuals, and five tables to sit them at, find a sc
 ## Data
 
 * **seating**: a seating plan: matches individuals to seats.  To avoid permutation complexity, individuals are sorted by table: `EFGH ABCD IJKL MNO PQR` is a valid seating, but `BACD EFGH IJKL MNO PQR` is not.
-* **schedule**: a list of `rotations` seatings
-```
-ABCD  EFGH  IJKL  MNO  PQR
+* **schedule**: a list of `rotations` seatings: ```ABCD  EFGH  IJKL  MNO  PQR
 CGIM  FJKR  ABNQ  EHL  DOP
 DFLM  BCHQ  GKNP  IJO  AER
 GLQR  DEIN  CHKO  AFP  BJM
