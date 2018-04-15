@@ -17,9 +17,9 @@ var tables = []int{4,4,4,3,3}
 // number of times to change seating
 var rotations = 9
 var source = rand.NewSource(time.Now().UnixNano())
-var pop_size = 10000
-var gen_size = 1000
-var mutation_permille = 32
+var pop_size = 1000
+var gen_size = 100
+var mutation_permille = 332
 var scores []int
 var member_count = 0
 
