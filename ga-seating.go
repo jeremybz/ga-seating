@@ -5,7 +5,6 @@ import (
   "math/rand"
   "time"
   "sort"
-  //"strings"
 )
 
 type byScore []int
@@ -15,11 +14,12 @@ type byScore []int
 var tables = []int{4,4,4,3,3}
 
 // number of times to change seating
-var rotations = 9
-var source = rand.NewSource(time.Now().UnixNano())
-var pop_size = 1000
-var gen_size = 100
-var mutation_permille = 332
+var rotations = 8
+var source = rand.NewSource( time.Now().UnixNano() )
+var random = rand.New( source )
+var pop_size = 200
+var gen_size = 20
+var mutation_permille = 667
 var scores []int
 var member_count = 0
 
@@ -44,7 +44,6 @@ func copy_seating( seat []int ) []int {
 }
 
 func shuffle_seating( seating []int ){
-  random := rand.New(source)
   // fisher-yates shuffle
   for i := len( seating ) - 1; i > 0; i-- {
      j := random.Intn(i + 1)
@@ -76,10 +75,6 @@ func count_meetings( seating []int, meetings []int ){
   }
 }
 
-func print_seating( seating []int ) {
-  fmt.Println( fmt.Sprint(seating), " ", evaluate_seating(seating) )
-}
-
 func order_tables( seating []int ){
   // sort each table in the seating
   offset := 0
@@ -91,30 +86,12 @@ func order_tables( seating []int ){
   }
 }
 
-func evaluate_seating( seating []int) int {
-  // witness the fitness of a single seating
-  fitness := 0
-
-  // count the number of times each member is paired with another
-  meetings := make( []int, member_count*member_count )
-  count_meetings( seating, meetings )
-
-  // score the seating based on the meeting count
-  // todo: make a better heuristic for scoring
-  for _,i := range meetings {
-    if( i == 1 ){
-      fitness += 1
-    }
-  }
-  return fitness
-}
-
 
 // ****************************************************************************
 // Schedules
 // ****************************************************************************
 
-func evaluate_schedule( sched [][]int ) int {
+func evaluate_schedule_directed( sched [][]int ) int {
   // find a fitness for a schedule, favoring counts of one and lower counts
   fitness := 0
   meetings := make( []int, member_count*member_count )
@@ -128,7 +105,7 @@ func evaluate_schedule( sched [][]int ) int {
     if( i == 1 ){
       fitness += 100
     }else if ( i > 1 ){
-      fitness = 100 - i
+      fitness += 90
     }
   }
   return fitness
@@ -151,7 +128,7 @@ func evaluate_schedule_simple( sched [][]int ) int {
   return fitness
 }
 
-func show_scores( sched [][]int ) {
+func print_scores( sched [][]int ) {
   meetings := make( []int, member_count*member_count )
 
   count_meetings( sched[0], meetings )
@@ -159,17 +136,22 @@ func show_scores( sched [][]int ) {
     count_meetings( sched[ i ], meetings )
   }
   for i := 0; i < member_count; i++ {
-    sum := 0
-    for j := 0; j < member_count; j++ {
-      sum += meetings[ (i * member_count ) + j ]
+    for k := 0; k <=i; k++ {
+      fmt.Printf( "  " )
     }
-    fmt.Println( meetings[ i*member_count : (i*(member_count)+member_count)] )
+    for j := i+1; j < member_count; j++ {
+      fmt.Printf( "%d ", ( meetings[ i * member_count + j ] ) )
+    }
+    fmt.Println()
   }
 }
 
 func print_schedule( sched [][]int) {
   for i := 0; i < rotations; i++ {
-    fmt.Println( fmt.Sprint(sched[i]) )
+   for j := 0; j < member_count; j++ {
+      fmt.Printf( "%s ", string( sched[i][j] + 97 ) )
+   }
+   fmt.Println()
   }
   fmt.Println( "" )
 }
@@ -198,14 +180,14 @@ func copy_schedule( old [][]int ) [][]int {
 }
 
 func mutate_schedule2( sched [][]int ){
-  random := rand.New(source)
+  // reshuffle a random seating
   rot := 1 + random.Intn( rotations - 1 )
   shuffle_seating( sched[ rot ] )
 }
 
 
 func mutate_schedule1( sched [][]int ){
-  random := rand.New(source)
+  // swap two seats in one seating
   // choose a seating (not the first!) to mutate
   rot := 1 + random.Intn( rotations - 1 )
 
@@ -242,8 +224,8 @@ func stepped_hill_climb(){
 
   for eval_depth := 1; eval_depth <= rotations; eval_depth++ {
     for i := 0; i < 400000; i++ {
-      score1 = evaluate_schedule( s1 )
-      score2 = evaluate_schedule( s2 )
+      score1 = evaluate_schedule_directed( s1 )
+      score2 = evaluate_schedule_directed( s2 )
       if( score1 > score2 ){
         s2 = copy_schedule( s1 )
         mutate_schedule1( s2 )
@@ -282,7 +264,6 @@ func (s byScore) Less(i, j int) bool {
 
 func hotsteamylove( pu1, pu2 [][]int ) [][]int{
   // create a new individual from two other individuals
-  random := rand.New(source)
 
   junior := copy_schedule( pu1 )
 
@@ -300,41 +281,44 @@ func ga(){
   // each generation, calculate each individual's fitness
   // sort them by fitness, and replace the lowest scoring
   // individuals with (sometimes mutated) offspring
-  random := rand.New(source)
 
   // the general population
   pop := make( [][][]int, pop_size)
 
   // the list of scores:
-  //   scores[ i ] = score( pop[ i ] )
+  // ::  scores[ i ] = score( pop[ i ] )
   scores = make ([]int, pop_size)
 
   // the population index ordered by score:
-  //   score( pop[ ordered_scores[ i ] ] ) <= score( pop[ ordered_scores[ i + 1 ] ] )
+  // ::  score( pop[ ordered_scores[ i ] ] ) <= score( pop[ ordered_scores[ i + 1 ] ] )
   ordered_scores := make ([]int, pop_size)
 
   for i := 0; i < pop_size; i++ {
     pop[ i ] = generate_schedule()
     scores[ i ] = evaluate_schedule_simple( pop[ i ] )
+    //scores[ i ] = evaluate_schedule_directed( pop[ i ] )
   }
   best := 0
-  goal := (member_count * (member_count -1 )) / 2
+  //goal := 100 * (member_count * (member_count -1 ) -2 ) / 2
+  hbest := 0
+  hgoal := (member_count * (member_count -1 )) / 2
   sum := 0
-  for generation := 0; best < goal; generation++{
+  for generation := 0; hbest < hgoal; generation++ {
     sum = 0
     for i := 0; i < pop_size; i++ {
       ordered_scores[ i ] = i
       sum += scores[ i ]
       if( scores[ i ] > best ){
         best = scores[ i ]
+        hbest = evaluate_schedule_simple( pop[ i ] )
         fmt.Println( "" )
-        fmt.Println( "Human/Goal/Score/Generation", evaluate_schedule_simple( pop[ i ] ), goal, best, generation )
+        fmt.Println( "Generation/Goal/Best/Actual", generation, hgoal, hbest, best )
         print_schedule( pop[ i ] )
-        show_scores( pop[ i ] )
+        print_scores( pop[ i ] )
       }
     }
-    if generation % 500 == 0 {
-      fmt.Println( "Generation/Goal/Best/Average", generation, goal, best, sum / pop_size )
+    if generation % 1000 == 0 {
+      fmt.Println( "Generation/Goal/Best/Average", generation, hgoal, hbest, sum / pop_size )
     }
     sort.Sort( byScore( ordered_scores ) )
     for i := 0; i < gen_size; i++ {
@@ -345,10 +329,15 @@ func ga(){
       if random.Intn( 1000 ) < mutation_permille {
         mutate_schedule1( pop[ ordered_scores [ i ] ] )
       }else if random.Intn( 1000 ) < mutation_permille {
-        mutate_schedule2( pop[ ordered_scores [ i ] ] )
+        //mutate_schedule2( pop[ ordered_scores [ i ] ] )
       }
       // update score of this individual
       scores[ ordered_scores[ i ] ] = evaluate_schedule_simple( pop[ ordered_scores[ i ] ] )
+      //scores[ ordered_scores[ i ] ] = evaluate_schedule_directed( pop[ ordered_scores[ i ] ] )
+    }
+
+    if( hbest > 146 ){
+      mutation_permille = 1000
     }
   }
   fmt.Println( "Solution found for", rotations, "steps." )
